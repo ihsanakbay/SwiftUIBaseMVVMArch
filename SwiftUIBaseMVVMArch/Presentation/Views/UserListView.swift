@@ -13,6 +13,8 @@ struct UserListView: View, BaseViewProtocol {
     // MARK: - Properties
     
     @StateObject var viewModel: UserListViewModel
+    @State private var searchText = ""
+    @State private var isSearching = false
     
     // MARK: - Initialization
     
@@ -24,7 +26,9 @@ struct UserListView: View, BaseViewProtocol {
     
     var body: some View {
         BaseView(viewModel: viewModel) {
-            VStack {
+            VStack(spacing: 0) {
+                searchBar
+                
                 if viewModel.users.isEmpty && !viewModel.isLoading {
                     emptyStateView
                 } else {
@@ -40,20 +44,90 @@ struct UserListView: View, BaseViewProtocol {
             .refreshable {
                 viewModel.refreshUsers()
             }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        // Add user action would go here
+                    }) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
         }
+    }
+    
+    // MARK: - Search Bar
+    
+    private var searchBar: some View {
+        HStack {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
+                
+                TextField("Search users", text: $searchText, onEditingChanged: { isEditing in
+                    withAnimation {
+                        isSearching = isEditing
+                    }
+                })
+                .foregroundColor(.primary)
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .padding(8)
+            .background(Color(.systemGray6))
+            .cornerRadius(10)
+            
+            if isSearching {
+                Button("Cancel") {
+                    searchText = ""
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    withAnimation {
+                        isSearching = false
+                    }
+                }
+                .transition(.move(edge: .trailing))
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
     
     // MARK: - User List View
     
     private var userListView: some View {
-        List {
-            ForEach(viewModel.users) { user in
-                NavigationLink(destination: UserDetailView(userId: user.id)) {
-                    UserRow(user: user)
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(filteredUsers) { user in
+                    NavigationLink(destination: UserDetailView(userId: user.id)) {
+                        UserRow(user: user)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
         }
-        .listStyle(InsetGroupedListStyle())
+    }
+    
+    // MARK: - Filtered Users
+    
+    private var filteredUsers: [User] {
+        if searchText.isEmpty {
+            return viewModel.users
+        } else {
+            return viewModel.users.filter { user in
+                user.name.lowercased().contains(searchText.lowercased()) ||
+                user.email.lowercased().contains(searchText.lowercased())
+            }
+        }
     }
     
     // MARK: - Empty State View
@@ -72,18 +146,16 @@ struct UserListView: View, BaseViewProtocol {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Button(action: {
-                viewModel.fetchUsers()
-            }) {
-                Text("Refresh")
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-            .padding(.top, 10)
+            AppButton(
+                title: "Refresh",
+                icon: "arrow.clockwise",
+                style: .primary,
+                action: {
+                    viewModel.fetchUsers()
+                }
+            )
+            .buttonSize(.medium)
+            .cornerRadius(10)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -95,33 +167,35 @@ struct UserRow: View {
     let user: User
     
     var body: some View {
-        HStack(spacing: 12) {
-            // Avatar placeholder
-            Circle()
-                .fill(Color.gray.opacity(0.3))
-                .frame(width: 50, height: 50)
-                .overlay(
-                    Text(user.name.prefix(1))
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.gray)
-                )
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(user.name)
-                    .font(.headline)
+        CardView(cornerRadius: 12, shadowRadius: 3, padding: 12) {
+            HStack(spacing: 12) {
+                // Avatar placeholder
+                Circle()
+                    .fill(Color.primaryColor.opacity(0.15))
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Text(user.name.prefix(1))
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primaryColor)
+                    )
                 
-                Text(user.email)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(user.name)
+                        .font(.headline)
+                    
+                    Text(user.email)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+                    .font(.system(size: 14, weight: .semibold))
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(.gray)
         }
-        .padding(.vertical, 4)
     }
 }
 

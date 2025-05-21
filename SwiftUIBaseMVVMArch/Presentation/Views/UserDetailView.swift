@@ -12,6 +12,7 @@ struct UserDetailView: View, BaseViewProtocol {
     // MARK: - Properties
     
     @StateObject var viewModel: UserDetailViewModel
+    @Environment(\.colorScheme) var colorScheme
     
     // MARK: - Initialization
     
@@ -28,6 +29,7 @@ struct UserDetailView: View, BaseViewProtocol {
                     if let user = viewModel.user {
                         userProfileView(user: user)
                         userInfoView(user: user)
+                        actionButtons(user: user)
                     } else if !viewModel.isLoading {
                         emptyStateView
                     }
@@ -43,78 +45,161 @@ struct UserDetailView: View, BaseViewProtocol {
             .refreshable {
                 viewModel.refreshUserDetails()
             }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button(action: {
+                            // Edit action
+                        }) {
+                            Label("Edit User", systemImage: "pencil")
+                        }
+                        
+                        Button(action: {
+                            // Delete action
+                        }) {
+                            Label("Delete User", systemImage: "trash")
+                                .foregroundColor(.red)
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
         }
     }
     
     // MARK: - User Profile View
     
     private func userProfileView(user: User) -> some View {
-        VStack(spacing: 16) {
-            // Avatar placeholder
-            Circle()
-                .fill(Color.blue.opacity(0.2))
-                .frame(width: 100, height: 100)
-                .overlay(
+        CardView(backgroundColor: .primaryColor.opacity(0.1), cornerRadius: 16, shadowRadius: 4) {
+            VStack(spacing: 16) {
+                // Avatar placeholder with gradient background
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.primaryColor, .accentColor]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 100, height: 100)
+                    
                     Text(user.name.prefix(1))
                         .font(.system(size: 40))
                         .fontWeight(.bold)
-                        .foregroundColor(.blue)
-                )
-            
-            Text(user.name)
-                .font(.title)
+                        .foregroundColor(.white)
+                }
+                .padding(4)
+                .background(Circle().fill(Color.white))
+                .shadow(color: .primaryColor.opacity(0.3), radius: 5, x: 0, y: 2)
+                
+                Text(user.name)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                Text(user.email)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 8)
+                
+                // User stats
+                HStack(spacing: 30) {
+                    statView(value: "\(user.id)", title: "ID")
+                    statView(value: "4.8", title: "Rating")
+                    statView(value: "42", title: "Posts")
+                }
+                .padding(.top, 8)
+            }
+            .padding(.vertical)
+        }
+    }
+    
+    // MARK: - Stat View
+    
+    private func statView(value: String, title: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.headline)
                 .fontWeight(.bold)
             
-            Text(user.email)
-                .font(.subheadline)
+            Text(title)
+                .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        )
     }
     
     // MARK: - User Info View
     
     private func userInfoView(user: User) -> some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("User Information")
-                .font(.headline)
-                .padding(.bottom, 5)
-            
-            infoRow(title: "ID", value: "\(user.id)")
-            infoRow(title: "Name", value: user.name)
-            infoRow(title: "Email", value: user.email)
-            
-            if let avatarURL = user.avatarURL {
-                infoRow(title: "Avatar URL", value: avatarURL)
+        CardView(cornerRadius: 16, shadowRadius: 4) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("User Information")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .padding(.bottom, 5)
+                
+                Divider()
+                
+                infoRow(icon: "person.fill", title: "Name", value: user.name)
+                infoRow(icon: "envelope.fill", title: "Email", value: user.email)
+                infoRow(icon: "number", title: "ID", value: "\(user.id)")
+                
+                if let avatarURL = user.avatarURL {
+                    infoRow(icon: "photo", title: "Avatar", value: avatarURL)
+                }
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        )
+    }
+    
+    // MARK: - Action Buttons
+    
+    private func actionButtons(user: User) -> some View {
+        HStack(spacing: 16) {
+            AppButton(
+                title: "Message",
+                icon: "message.fill",
+                style: .primary,
+                action: {
+                    // Message action
+                }
+            )
+            .buttonSize(.medium)
+            .fullWidth()
+            
+            AppButton(
+                title: "Call",
+                icon: "phone.fill",
+                style: .outline,
+                action: {
+                    // Call action
+                }
+            )
+            .buttonSize(.medium)
+            .fullWidth()
+        }
+        .padding(.top, 8)
     }
     
     // MARK: - Info Row
     
-    private func infoRow(title: String, value: String) -> some View {
-        HStack(alignment: .top) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .frame(width: 80, alignment: .leading)
+    private func infoRow(icon: String, title: String, value: String) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(.primaryColor)
+                .frame(width: 24, height: 24)
             
-            Text(value)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text(value)
+                    .font(.body)
+            }
+            
+            Spacer()
         }
         .padding(.vertical, 4)
     }
@@ -135,18 +220,16 @@ struct UserDetailView: View, BaseViewProtocol {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Button(action: {
-                viewModel.fetchUserDetails()
-            }) {
-                Text("Refresh")
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-            .padding(.top, 10)
+            AppButton(
+                title: "Refresh",
+                icon: "arrow.clockwise",
+                style: .primary,
+                action: {
+                    viewModel.fetchUserDetails()
+                }
+            )
+            .buttonSize(.medium)
+            .cornerRadius(10)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

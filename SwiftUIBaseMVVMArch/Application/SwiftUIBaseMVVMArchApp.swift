@@ -92,6 +92,7 @@ struct SwiftUIBaseMVVMArchApp: App {
     
     // MARK: - Setup
     
+    /// Sets up the appearance of the app
     private func setupAppearance() {
         // Set navigation bar appearance
         let appearance = UINavigationBarAppearance()
